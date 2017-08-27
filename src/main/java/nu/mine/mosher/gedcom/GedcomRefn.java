@@ -2,11 +2,14 @@ package nu.mine.mosher.gedcom;
 
 import nu.mine.mosher.collection.TreeNode;
 import nu.mine.mosher.gedcom.exception.InvalidLevel;
+import nu.mine.mosher.mopper.ArgParser;
 
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.*;
+
+import static nu.mine.mosher.logging.Jul.log;
 
 /**
  * For each top-level record (INDI, FAM, SOUR, etc.) that does not have a REFN,
@@ -14,51 +17,32 @@ import java.util.*;
  *
  * Created by user on 12/12/16.
  */
-public class GedcomRefn {
-    private final File file;
-    private Charset charset;
-    private GedcomTree gt;
-    private final Map<String, String> mapRemapIds = new HashMap<>(4096);
+public class GedcomRefn implements Gedcom.Processor {
+    private final GedcomRefnOptions options;
 
 
 
     public static void main(final String... args) throws InvalidLevel, IOException {
-        if (args.length < 1) {
-            throw new IllegalArgumentException("usage: java -jar gedcom-refn in.ged >out.ged");
-        } else {
-            new GedcomRefn(args[0]).main();
-        }
+        log();
+        final GedcomRefnOptions options = new ArgParser<>(new GedcomRefnOptions()).parse(args).verify();
+        new Gedcom(options, new GedcomRefn(options)).main();
+        System.out.flush();
+        System.err.flush();
     }
 
 
 
-    GedcomRefn(final String filename) {
-        this.file = new File(filename);
+    private GedcomRefn(final GedcomRefnOptions options) {
+        this.options = options;
     }
 
-    public void main() throws IOException, InvalidLevel {
-        loadGedcom();
-        updateGedcom();
-        saveGedcom();
+    @Override
+    public boolean process(final GedcomTree tree) {
+//        addNodes(createNewRefns(tree.getRoot(), new ArrayList<>(4096)));
+        createNewRefns(tree.getRoot());
+        return true;
     }
 
-    private void loadGedcom() throws IOException, InvalidLevel {
-        this.charset = Gedcom.getCharset(this.file);
-        this.gt = Gedcom.parseFile(file, this.charset, false);
-    }
-
-    private void updateGedcom() {
-        addNodes(createNewRefns(this.gt.getRoot(), new ArrayList<>(4096)));
-    }
-
-    private void saveGedcom() throws IOException {
-        final BufferedWriter out = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(FileDescriptor.out), this.charset));
-
-        Gedcom.writeFile(this.gt, out, Integer.MAX_VALUE);
-
-        out.flush();
-        out.close();
-    }
 
 
     private static class ChildToBeAdded {
@@ -70,26 +54,26 @@ public class GedcomRefn {
         }
     }
 
-    private List<ChildToBeAdded> createNewRefns(final TreeNode<GedcomLine> root, final List<ChildToBeAdded> refns) {
+    private void /*List<ChildToBeAdded>*/ createNewRefns(final TreeNode<GedcomLine> root/*, final List<ChildToBeAdded> refns*/) {
         root.forEach(top -> {
             final GedcomLine gedcomLine = top.getObject();
             if (gedcomLine != null && gedcomLine.hasID()) {
                 if (!hasRefn(top)) {
-                    final TreeNode<GedcomLine> refn = new TreeNode<>(new GedcomLine(gedcomLine.getLevel() + 1, "", GedcomTag.REFN.name(), UUID.randomUUID().toString()));
-                    refns.add(new ChildToBeAdded(top, refn));
+//                    refns.add(new ChildToBeAdded(top, new TreeNode<>(gedcomLine.createChild(GedcomTag.REFN, UUID.randomUUID().toString()))));
+                    top.addChild(new TreeNode<>(gedcomLine.createChild(GedcomTag.REFN, UUID.randomUUID().toString())));
                 }
             }
         });
-        return refns;
+//        return refns;
     }
 
 
 
-    private static void addNodes(final List<ChildToBeAdded> adds) {
-        adds.forEach(add -> {
-            add.parent.addChild(add.child);
-        });
-    }
+//    private static void addNodes(final List<ChildToBeAdded> adds) {
+//        adds.forEach(add -> {
+//            add.parent.addChild(add.child);
+//        });
+//    }
 
 
 
