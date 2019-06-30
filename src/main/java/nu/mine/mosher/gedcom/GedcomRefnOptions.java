@@ -4,7 +4,7 @@ package nu.mine.mosher.gedcom;
 public class GedcomRefnOptions extends GedcomOptions {
     public void help() {
         this.help = true;
-        System.err.println("Usage: java -jar gedcom-refn-all.jar [OPTIONS] <in.ged >out.ged");
+        System.err.println("Usage: gedcom-refn [OPTIONS] <in.ged >out.ged");
         System.err.println("Adds REFN (UUIDs) to top-level GEDCOM records that don't already one.");
         System.err.println("Options:");
         options();
